@@ -1,0 +1,149 @@
+# This file can update the JupyterHub Helm chart's default configuration values.
+#
+# For reference see the configuration reference and default values, but make
+# sure to refer to the Helm chart version of interest to you!
+#
+# Introduction to YAML:     https://www.youtube.com/watch?v=cdLNKUoMc6c
+# Chart config reference:   https://zero-to-jupyterhub.readthedocs.io/en/stable/resources/reference.html
+# Chart default values:     https://github.com/jupyterhub/zero-to-jupyterhub-k8s/blob/HEAD/jupyterhub/values.yaml
+# Available chart versions: https://jupyterhub.github.io/helm-chart/
+#
+
+hub:
+  networkPolicy:
+    enabled: false
+  config:
+    JupyterHub:
+      authenticator_class: ldapauthenticator.LDAPAuthenticator
+    LDAPAuthenticator:
+      admin_users:
+        - user01
+      allowed_groups:
+        - cn=group1
+      bind_dn_template:
+        - cn={username},ou=UID,dc=1,dc=2,dc=3
+      escape_userdn: false
+      lookup_dn: false
+      server_address:ad.1.2.3
+      user_attribute: cn
+  extraConfig: # https://zero-to-jupyterhub.readthedocs.io/en/latest/administrator/advanced.html#hub-extraconfig
+  fsGid: # 1000
+  containerSecurityContext:
+    runAsUser: # 1000
+    runAsGroup: # 1000
+  image:
+    name: registry/jupyterhub-k8s-hub
+    tag: "1.2.0"
+
+proxy:
+  service:
+    type: ClusterIP
+  secretToken: "token"
+  chp:
+    containerSecurityContext:
+      runAsUser: # 65534 # nobody user
+      runAsGroup: # 65534 # nobody group
+    image:
+      name: registry/jupyterhub-configurable-http-proxy
+      tag: "4.5.0"
+  traefik:
+    containerSecurityContext:
+      runAsUser: # 65534 # nobody user
+      runAsGroup: # 65534 # nobody group
+    image:
+      name: registry/jupyterhub-traefik
+      tag: "v2.4.11"
+  secretSync:
+    containerSecurityContext:
+      runAsUser: # 65534 # nobody user
+      runAsGroup: # 65534 # nobody group
+    image:
+      name: registry/jupyterhub-k8s-secret-sync
+      tag: "1.2.0"
+
+singleuser:
+  defaultUrl: "/lab"
+  extraEnv:
+    JUPYTERHUB_SINGLEUSER_APP: "jupyter_server.serverapp.ServerApp"
+  extraFiles: # https://jupyterlab.readthedocs.io/en/stable/user/directories.html#labconfig-directories & https://zero-to-jupyterhub.readthedocs.io/en/latest/jupyterhub/customizing/user-environment.html#disable-specific-jupyterlab-extensions
+    lab-config:
+      mountPath: /etc/jupyter/labconfig/page_config.json
+      data:
+        disabledExtensions:
+          "@jupyterlab/extensionmanager-extension": true
+          "@jupyterlab/docmanager-extension:download": true
+          "@jupyterlab/filebrowser-extension:download": true
+        terminalsAvailable: false
+  networkPolicy:
+    enabled: false
+  cloudMetadata:
+    blockWithIptables: False
+  uid: #1000
+  fsGid: #100
+  serviceAccountName: default
+  image:
+    name: registry/image-jupyter
+    tag: "0.0.1"
+  networkTools:
+    image:
+      name: registry/jupyterhub-k8s-network-tools
+      tag: "1.2.0"
+  cpu:
+    limit: 1
+    guarantee: 1
+  memory:
+    limit: 1G
+    guarantee: 1G
+  extraResource:
+    limits: {}
+    guarantees: {}
+  profileList:
+    - display_name: "Standard Notebook"
+      description: ""
+      default: true
+  storage:
+    extraVolumes:
+      - name: proddata-vol
+        persistentVolumeClaim:
+          claimName: prod-data
+      - name: shareddata-vol
+        persistentVolumeClaim:
+          claimName: shared-data
+
+    extraVolumeMounts:
+      - name: proddata-vol
+        mountPath: /prod_data
+      - name: shareddata-vol
+        mountPath: /shared_data
+      - name: shareddata-vol
+        mountPath: /opt/app-root/src/shared_data"
+      - name: proddata-vol
+        mountPath: "/opt/app-root/src/prod_data"
+
+scheduling:
+  userScheduler:
+    enabled: false # disabled due not using autoscale functionality
+  userPlaceholder:
+    enabled: false
+
+
+prePuller:
+  continuous: # disabled due not using autoscale functionality
+    enabled: false
+  containerSecurityContext:
+    runAsUser:  # 65534 # nobody user
+    runAsGroup: # 65534 # nobody group
+  hook:
+    containerSecurityContext:
+      runAsUser: # 65534 # nobody user
+      runAsGroup: # 65534 # nobody group
+    image:
+      name: registry/jupyterhub-k8s-image-awaiter
+      tag: "1.2.0"
+  pause:
+    containerSecurityContext:
+      runAsUser: # 65534 # nobody user
+      runAsGroup: # 65534 # nobody group
+    image:
+      name: registry/jupyterhub-pause
+      tag: "3.5"

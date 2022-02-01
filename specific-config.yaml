@@ -1,0 +1,46 @@
+---
+# Source: jupyter-specifics/templates/pvc_data_template.yml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: prod-data
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ocs-storagecluster-cephfs
+---
+# Source: jupyter-specifics/templates/pvc_shared_data.yml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: shared-data
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ocs-storagecluster-cephfs
+---
+# Source: jupyter-specifics/templates/route.yaml
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: notebooks
+spec:
+  to:
+    kind: Service
+    name: proxy-public
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+  wildcardPolicy: None
